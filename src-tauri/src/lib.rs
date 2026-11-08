@@ -1,10 +1,12 @@
 pub mod converters;
 pub mod inspector;
 pub mod models;
+pub mod pdf_toolkit;
+pub mod unlocker;
 
 use models::{
-    ConversionOptions, DependencyStatus, InspectedFile, PdfToolkitResult, SingleConversionResponse,
-    VaultEntry,
+    ConversionOptions, DependencyStatus, InspectedFile, PdfToolkitRequest, PdfToolkitResult,
+    SingleConversionResponse, UnlockResult, VaultEntry,
 };
 
 pub fn get_app_version() -> &'static str {
@@ -38,6 +40,34 @@ pub fn merge_images_to_pdf_cmd(
         &output_file_name,
         quality,
     )
+}
+
+pub fn run_pdf_toolkit_cmd(request: PdfToolkitRequest) -> Result<PdfToolkitResult, String> {
+    pdf_toolkit::execute_pdf_toolkit(&request)
+}
+
+pub fn unlock_protected_file_cmd(
+    file_id: String,
+    input_path: String,
+    output_dir: String,
+    manual_password: Option<String>,
+    vault_entries: Vec<VaultEntry>,
+) -> Result<UnlockResult, String> {
+    unlocker::unlock_file_permanent(
+        &file_id,
+        &input_path,
+        &output_dir,
+        manual_password.as_deref(),
+        &vault_entries,
+    )
+}
+
+pub fn load_vault_entries_cmd() -> Vec<VaultEntry> {
+    unlocker::load_vault()
+}
+
+pub fn save_vault_entries_cmd(entries: Vec<VaultEntry>) -> Result<Vec<VaultEntry>, String> {
+    unlocker::save_vault(&entries)
 }
 
 pub fn default_dependency_snapshot() -> Vec<DependencyStatus> {
