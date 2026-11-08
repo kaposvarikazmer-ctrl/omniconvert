@@ -1,9 +1,14 @@
+pub mod inspector;
 pub mod models;
 
-use models::DependencyStatus;
+use models::{DependencyStatus, InspectedFile, VaultEntry};
 
 pub fn get_app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
+}
+
+pub fn inspect_files_cmd(paths: Vec<String>, vault_passwords: Vec<VaultEntry>) -> Vec<InspectedFile> {
+    inspector::inspect_files_batch(&paths, &vault_passwords)
 }
 
 pub fn default_dependency_snapshot() -> Vec<DependencyStatus> {
