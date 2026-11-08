@@ -1,8 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use omniconvert_lib::models::{
-    ConversionOptions, DependencyStatus, InspectedFile, PdfToolkitRequest, PdfToolkitResult,
-    SingleConversionResponse, UnlockResult, VaultEntry,
+    ConversionOptions, DependencyStatus, PdfToolkitRequest, VaultEntry,
 };
 use serde::{Deserialize, Serialize};
 

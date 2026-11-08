@@ -1,0 +1,65 @@
+name: OmniConvert Cross-Platform Release (macOS & Windows)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macOS Apple Silicon (M1/M2/M3/M4 -> .dmg & .app)
+          - platform: "macos-latest"
+            args: "--target aarch64-apple-darwin"
+            rust_target: "aarch64-apple-darwin"
+          # macOS Intel (x86_64 -> .dmg & .app)
+          - platform: "macos-latest"
+            args: "--target x86_64-apple-darwin"
+            rust_target: "x86_64-apple-darwin"
+          # Windows x64 (.msi & .exe NSIS installer)
+          - platform: "windows-latest"
+            args: "--target x86_64-pc-windows-msvc"
+            rust_target: "x86_64-pc-windows-msvc"
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Rust Cargo Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and Bundle OmniConvert with Tauri Action
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "OmniConvert v__VERSION__"
+          releaseBody: "OmniConvert Univerzális Offline Fájlkonvertáló, PDF Eszköztár, Vizuális PDF Szövegszerkesztő (UTF-8 ő/ű) és Dokumentum-Feloldó telepítők (macOS .dmg/.app & Windows .msi/.exe)."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}

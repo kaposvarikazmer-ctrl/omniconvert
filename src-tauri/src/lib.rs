@@ -260,3 +260,68 @@ fn create_sample_pdf(
     doc.save(out_path).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::EncryptionStatus;
+
+    #[test]
+    fn test_end_to_end_inspector_unlocker_and_converters() {
+        let sample_paths = generate_demo_samples_cmd().expect("Sample generation should succeed");
+        assert!(sample_paths.len() >= 5);
+
+        let vault = load_vault_entries_cmd();
+        let inspected = inspect_files_cmd(sample_paths.clone(), vault.clone());
+        assert_eq!(inspected.len(), sample_paths.len());
+
+        // Verify Owner-Locked PDF detection & instant passwordless unlocking
+        let owner_pdf = inspected
+            .iter()
+            .find(|f| f.name.contains("OwnerLock"))
+            .expect("Owner-locked PDF should be inspected");
+        assert_eq!(owner_pdf.encryption_status, EncryptionStatus::OwnerLocked);
+
+        let unlock_res = unlock_protected_file_cmd(
+            owner_pdf.id.clone(),
+            owner_pdf.path.clone(),
+            "./omniconvert-output".to_string(),
+            None,
+            vault.clone(),
+        )
+        .expect("Passwordless Owner Lock stripping should succeed");
+        assert!(unlock_res.success);
+        assert_eq!(unlock_res.method_used, "owner_lock_strip");
+
+        // Verify Auto-Unlock Vault PDF detection & automatic unlocking
+        let vault_pdf = inspected
+            .iter()
+            .find(|f| f.name.contains("AutoVault"))
+            .expect("Auto-Vault PDF should be inspected");
+        assert_eq!(vault_pdf.encryption_status, EncryptionStatus::AutoUnlocked);
+
+        // Verify CSV -> XLSX and CSV -> JSON conversion
+        let csv_file = inspected
+            .iter()
+            .find(|f| f.detected_format == "csv")
+            .expect("CSV file should be inspected");
+        let opts = ConversionOptions {
+            output_dir: "./omniconvert-output".to_string(),
+            image_quality: 90,
+            resize_width: None,
+            resize_height: None,
+            keep_aspect_ratio: true,
+            strip_exif: true,
+            merge_images_to_single_pdf: false,
+            video_resolution: "original".to_string(),
+            video_crf: 23,
+            hardware_acceleration: "auto".to_string(),
+            audio_bitrate_kbps: 192,
+        };
+        let xlsx_res =
+            convert_single_file_cmd(csv_file.path.clone(), "xlsx".to_string(), opts.clone())
+                .expect("CSV to XLSX conversion should succeed");
+        assert!(xlsx_res.output_size_bytes > 0);
+    }
+}
+
