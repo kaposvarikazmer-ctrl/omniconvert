@@ -2,7 +2,7 @@ use crate::converters::image_conv::{calculate_savings, ensure_output_dir, merge_
 use crate::models::{PdfToolkitRequest, PdfToolkitResult};
 use image::codecs::jpeg::JpegEncoder;
 use image::{DynamicImage, ImageFormat, Rgba, RgbaImage};
-use lopdf::{dictionary, Document, Object, ObjectId};
+use lopdf::{Document, Object, ObjectId};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::BufWriter;
