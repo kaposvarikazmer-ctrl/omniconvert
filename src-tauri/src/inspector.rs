@@ -2,7 +2,7 @@ use crate::models::{
     ArchiveMetadata, DataMetadata, EncryptionStatus, InspectedFile, MediaMetadata, PdfMetadata,
     VaultEntry,
 };
-use calamine::{Reader, Sheets};
+use calamine::Reader;
 use lopdf::{Document, Object};
 use rayon::prelude::*;
 use std::fs::File;
@@ -242,8 +242,8 @@ fn resolve_format_and_mime(
     }
 
     // Check SVG / XML / HTML / JSON / YAML / CSV / Markdown / LaTeX in text header
-    if let Ok(text_Sample) = std::str::from_utf8(header) {
-        let trimmed = text_Sample.trim_start();
+    if let Ok(text_sample) = std::str::from_utf8(header) {
+        let trimmed = text_sample.trim_start();
         if trimmed.starts_with("<svg") || (trimmed.starts_with("<?xml") && trimmed.contains("<svg"))
         {
             let mismatch = !ext_lower.is_empty() && ext_lower != "svg";

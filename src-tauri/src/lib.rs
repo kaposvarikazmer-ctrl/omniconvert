@@ -1,14 +1,43 @@
+pub mod converters;
 pub mod inspector;
 pub mod models;
 
-use models::{DependencyStatus, InspectedFile, VaultEntry};
+use models::{
+    ConversionOptions, DependencyStatus, InspectedFile, PdfToolkitResult, SingleConversionResponse,
+    VaultEntry,
+};
 
 pub fn get_app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-pub fn inspect_files_cmd(paths: Vec<String>, vault_passwords: Vec<VaultEntry>) -> Vec<InspectedFile> {
+pub fn inspect_files_cmd(
+    paths: Vec<String>,
+    vault_passwords: Vec<VaultEntry>,
+) -> Vec<InspectedFile> {
     inspector::inspect_files_batch(&paths, &vault_passwords)
+}
+
+pub fn convert_single_file_cmd(
+    input_path: String,
+    target_format: String,
+    options: ConversionOptions,
+) -> Result<SingleConversionResponse, String> {
+    converters::convert_single_dispatch(&input_path, &target_format, &options)
+}
+
+pub fn merge_images_to_pdf_cmd(
+    input_paths: Vec<String>,
+    output_dir: String,
+    output_file_name: String,
+    quality: u8,
+) -> Result<PdfToolkitResult, String> {
+    converters::image_conv::merge_images_into_pdf(
+        &input_paths,
+        &output_dir,
+        &output_file_name,
+        quality,
+    )
 }
 
 pub fn default_dependency_snapshot() -> Vec<DependencyStatus> {
