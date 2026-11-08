@@ -323,5 +323,125 @@ mod tests {
                 .expect("CSV to XLSX conversion should succeed");
         assert!(xlsx_res.output_size_bytes > 0);
     }
+
+    #[test]
+    fn test_pdf_toolkit_merge_split_compress_rotate() {
+        let sample_paths = generate_demo_samples_cmd().expect("Sample generation should succeed");
+        let open_pdf = sample_paths
+            .iter()
+            .find(|p| p.contains("Nyitott"))
+            .expect("Open PDF sample should exist")
+            .clone();
+
+        // 1. Merge two PDFs
+        let merge_res = run_pdf_toolkit_cmd(PdfToolkitRequest {
+            operation: "merge".to_string(),
+            input_paths: vec![open_pdf.clone(), open_pdf.clone()],
+            output_dir: "./omniconvert-output".to_string(),
+            split_mode: None,
+            page_ranges: None,
+            merge_ranges_into_single_file: None,
+            every_n_pages: None,
+            compression_profile: None,
+            rotation_degrees: None,
+            target_pages: None,
+            image_format: None,
+        })
+        .expect("PDF merge should succeed");
+        assert!(merge_res.success);
+        let merged_path = merge_res.output_paths[0].clone();
+
+        // 2. Compress merged PDF
+        let comp_res = run_pdf_toolkit_cmd(PdfToolkitRequest {
+            operation: "compress".to_string(),
+            input_paths: vec![merged_path.clone()],
+            output_dir: "./omniconvert-output".to_string(),
+            split_mode: None,
+            page_ranges: None,
+            merge_ranges_into_single_file: None,
+            every_n_pages: None,
+            compression_profile: Some("balanced".to_string()),
+            rotation_degrees: None,
+            target_pages: None,
+            image_format: None,
+        })
+        .expect("PDF compression should succeed");
+        assert!(comp_res.success);
+        assert!(comp_res.output_size_bytes > 0);
+
+        // 3. Split merged PDF in burst mode
+        let split_res = run_pdf_toolkit_cmd(PdfToolkitRequest {
+            operation: "split".to_string(),
+            input_paths: vec![merged_path.clone()],
+            output_dir: "./omniconvert-output".to_string(),
+            split_mode: Some("burst".to_string()),
+            page_ranges: None,
+            merge_ranges_into_single_file: Some(false),
+            every_n_pages: None,
+            compression_profile: None,
+            rotation_degrees: None,
+            target_pages: None,
+            image_format: None,
+        })
+        .expect("PDF burst split should succeed");
+        assert!(split_res.success);
+        assert_eq!(split_res.output_paths.len(), 2);
+
+        // 4. Rotate PDF pages 90 degrees
+        let rot_res = run_pdf_toolkit_cmd(PdfToolkitRequest {
+            operation: "rotate".to_string(),
+            input_paths: vec![open_pdf],
+            output_dir: "./omniconvert-output".to_string(),
+            split_mode: None,
+            page_ranges: None,
+            merge_ranges_into_single_file: None,
+            every_n_pages: None,
+            compression_profile: None,
+            rotation_degrees: Some(90),
+            target_pages: None,
+            image_format: None,
+        })
+        .expect("PDF rotate should succeed");
+        assert!(rot_res.success);
+    }
+
+    #[test]
+    fn test_image_and_archive_pipelines() {
+        let sample_paths = generate_demo_samples_cmd().expect("Sample generation should succeed");
+        let png_path = sample_paths
+            .iter()
+            .find(|p| p.ends_with(".png"))
+            .expect("PNG sample should exist")
+            .clone();
+        let zip_path = sample_paths
+            .iter()
+            .find(|p| p.ends_with(".zip"))
+            .expect("ZIP sample should exist")
+            .clone();
+
+        let opts = ConversionOptions {
+            output_dir: "./omniconvert-output".to_string(),
+            image_quality: 85,
+            resize_width: Some(320),
+            resize_height: Some(180),
+            keep_aspect_ratio: true,
+            strip_exif: true,
+            merge_images_to_single_pdf: false,
+            video_resolution: "original".to_string(),
+            video_crf: 23,
+            hardware_acceleration: "auto".to_string(),
+            audio_bitrate_kbps: 192,
+        };
+
+        // PNG -> WEBP with resize & EXIF stripping
+        let webp_res = convert_single_file_cmd(png_path, "webp".to_string(), opts.clone())
+            .expect("PNG to WEBP conversion should succeed");
+        assert!(webp_res.output_size_bytes > 0);
+
+        // ZIP -> TAR.GZ archive repackaging
+        let targz_res = convert_single_file_cmd(zip_path, "tar.gz".to_string(), opts)
+            .expect("ZIP to TAR.GZ repackaging should succeed");
+        assert!(targz_res.output_size_bytes > 0);
+    }
 }
 
